@@ -386,7 +386,7 @@
             kubectl get svc -n storagerent           
             ```                
 
-![image](https://user-images.githubusercontent.com/84304043/122770160-229aa700-d2e0-11eb-9f85-b6fcb8cabe0e.png)
+![image](https://user-images.githubusercontent.com/84304082/124934649-dff6ff80-e03f-11eb-9db9-91ebbb36adc1.png)
 
 
 # Correlation
@@ -860,18 +860,18 @@ siege -c1 -t10S -v --content-type "application/json" 'http://storage:8080/storag
 ** SIEGE 4.0.4
 ** Preparing 1 concurrent users for battle.
 The server is now under siege...
-HTTP/1.1 201     0.49 secs:     254 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.05 secs:     254 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.02 secs:     254 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.03 secs:     254 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.02 secs:     254 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.02 secs:     254 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.03 secs:     254 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.03 secs:     254 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.03 secs:     254 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.03 secs:     256 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.03 secs:     256 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.02 secs:     256 bytes ==> POST http://storage:8080/storages
+HTTP/1.1 201     0.49 secs:     283 bytes ==> POST http://storage:8080/storages
+HTTP/1.1 201     0.05 secs:     283 bytes ==> POST http://storage:8080/storages
+HTTP/1.1 201     0.02 secs:     283 bytes ==> POST http://storage:8080/storages
+HTTP/1.1 201     0.03 secs:     283 bytes ==> POST http://storage:8080/storages
+HTTP/1.1 201     0.02 secs:     283 bytes ==> POST http://storage:8080/storages
+HTTP/1.1 201     0.02 secs:     283 bytes ==> POST http://storage:8080/storages
+HTTP/1.1 201     0.03 secs:     283 bytes ==> POST http://storage:8080/storages
+HTTP/1.1 201     0.03 secs:     283 bytes ==> POST http://storage:8080/storages
+HTTP/1.1 201     0.03 secs:     283 bytes ==> POST http://storage:8080/storages
+HTTP/1.1 201     0.03 secs:     283 bytes ==> POST http://storage:8080/storages
+HTTP/1.1 201     0.03 secs:     283 bytes ==> POST http://storage:8080/storages
+HTTP/1.1 201     0.02 secs:     283 bytes ==> POST http://storage:8080/storages
 ```
 
 - 동시사용자 2로 부하 생성 시 503 에러 168개 발생
@@ -881,26 +881,26 @@ siege -c2 -t10S -v --content-type "application/json" 'http://storage:8080/storag
 ** SIEGE 4.0.4
 ** Preparing 2 concurrent users for battle.
 The server is now under siege...
-HTTP/1.1 201     0.02 secs:     258 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.02 secs:     258 bytes ==> POST http://storage:8080/storages
+HTTP/1.1 201     0.02 secs:     283 bytes ==> POST http://storage:8080/storages
+HTTP/1.1 201     0.02 secs:     283 bytes ==> POST http://storage:8080/storages
 HTTP/1.1 503     0.10 secs:      81 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.02 secs:     258 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.04 secs:     258 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.05 secs:     258 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.22 secs:     258 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.08 secs:     258 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.07 secs:     258 bytes ==> POST http://storage:8080/storages
+HTTP/1.1 201     0.02 secs:     283 bytes ==> POST http://storage:8080/storages
+HTTP/1.1 201     0.04 secs:     283 bytes ==> POST http://storage:8080/storages
+HTTP/1.1 201     0.05 secs:     283 bytes ==> POST http://storage:8080/storages
+HTTP/1.1 201     0.22 secs:     283 bytes ==> POST http://storage:8080/storages
+HTTP/1.1 201     0.08 secs:     283 bytes ==> POST http://storage:8080/storages
+HTTP/1.1 201     0.07 secs:     283 bytes ==> POST http://storage:8080/storages
 HTTP/1.1 503     0.01 secs:      81 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.01 secs:     258 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.03 secs:     258 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.02 secs:     258 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.01 secs:     258 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.02 secs:     258 bytes ==> POST http://storage:8080/storages
+HTTP/1.1 201     0.01 secs:     283 bytes ==> POST http://storage:8080/storages
+HTTP/1.1 201     0.03 secs:     283 bytes ==> POST http://storage:8080/storages
+HTTP/1.1 201     0.02 secs:     283 bytes ==> POST http://storage:8080/storages
+HTTP/1.1 201     0.01 secs:     283 bytes ==> POST http://storage:8080/storages
+HTTP/1.1 201     0.02 secs:     283 bytes ==> POST http://storage:8080/storages
 HTTP/1.1 503     0.01 secs:      81 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.01 secs:     258 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.02 secs:     258 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.02 secs:     258 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.02 secs:     258 bytes ==> POST http://storage:8080/storages
+HTTP/1.1 201     0.01 secs:     283 bytes ==> POST http://storage:8080/storages
+HTTP/1.1 201     0.02 secs:     283 bytes ==> POST http://storage:8080/storages
+HTTP/1.1 201     0.02 secs:     283 bytes ==> POST http://storage:8080/storages
+HTTP/1.1 201     0.02 secs:     283 bytes ==> POST http://storage:8080/storages
 HTTP/1.1 503     0.00 secs:      81 bytes ==> POST http://storage:8080/storages
 
 Lifting the server siege...
@@ -1021,14 +1021,14 @@ siege -c100 -t120S -r10 -v --content-type "application/json" 'http://storage:808
 ** SIEGE 4.0.4
 ** Preparing 1 concurrent users for battle.
 The server is now under siege...
-HTTP/1.1 201     0.01 secs:     260 bytes ==> POST http://storage:8080/storags
-HTTP/1.1 201     0.01 secs:     260 bytes ==> POST http://storage:8080/storags
-HTTP/1.1 201     0.01 secs:     260 bytes ==> POST http://storage:8080/storags
-HTTP/1.1 201     0.03 secs:     260 bytes ==> POST http://storage:8080/storags
-HTTP/1.1 201     0.00 secs:     260 bytes ==> POST http://storage:8080/storags
-HTTP/1.1 201     0.02 secs:     260 bytes ==> POST http://storage:8080/storags
-HTTP/1.1 201     0.01 secs:     260 bytes ==> POST http://storage:8080/storags
-HTTP/1.1 201     0.01 secs:     260 bytes ==> POST http://storage:8080/storags
+HTTP/1.1 201     0.01 secs:     283 bytes ==> POST http://storage:8080/storags
+HTTP/1.1 201     0.01 secs:     283 bytes ==> POST http://storage:8080/storags
+HTTP/1.1 201     0.01 secs:     283 bytes ==> POST http://storage:8080/storags
+HTTP/1.1 201     0.03 secs:     283 bytes ==> POST http://storage:8080/storags
+HTTP/1.1 201     0.00 secs:     283 bytes ==> POST http://storage:8080/storags
+HTTP/1.1 201     0.02 secs:     283 bytes ==> POST http://storage:8080/storags
+HTTP/1.1 201     0.01 secs:     283 bytes ==> POST http://storage:8080/storags
+HTTP/1.1 201     0.01 secs:     283 bytes ==> POST http://storage:8080/storags
 
 ```
 
