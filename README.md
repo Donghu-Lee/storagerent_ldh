@@ -1153,7 +1153,7 @@ payment-5b7444449f-mp4kf   1/1     Running     1          10m
 ```
 pod 상태 확인을 통해 payment서비스의 RESTARTS 횟수가 증가한 것을 확인할 수 있다.
 
-# Config Map/ Persistence Volume
+# Config Map
 - Config Map 사용
 
 1: cofigmap.yml 파일 생성
