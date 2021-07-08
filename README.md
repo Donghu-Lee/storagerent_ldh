@@ -272,6 +272,10 @@
 		  uri: http://viewpage:8085
 		  predicates:
 		    - Path= /storageviews/**
+		- id: delivery
+		  uri: http://delivery:8086
+		  predicates:
+		    - Path=/delivery/** 		    
 	      globalcors:
 		corsConfigurations:
 		  '[/**]':
