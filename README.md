@@ -973,9 +973,9 @@ Shortest transaction:           0.01
 
 ![image](https://user-images.githubusercontent.com/84304043/122850814-d6378180-d348-11eb-9cd2-eb0873f1c8d7.png)
 
-- storage 서비스에 대한 replica 를 동적으로 늘려주도록 HPA 를 설정한다. 설정은 CPU 사용량이 3프로를 넘어서면 replica 를 10개까지 늘려준다:
+- storage 서비스에 대한 replica 를 동적으로 늘려주도록 HPA 를 설정한다. 설정은 CPU 사용량이 20프로를 넘어서면 replica 를 3개까지 늘려준다:
 ```
-kubectl autoscale deployment storage -n storagerent --cpu-percent=3 --min=1 --max=10
+kubectl autoscale deployment storage -n storagerent --cpu-percent=20 --min=1 --max=3
 ```
 
 - 부하를 동시사용자 100명, 2분 동안 걸어준다.
@@ -987,6 +987,7 @@ siege -c100 -t120S -v --content-type "application/json" 'http://storage:8080/sto
 kubectl get deploy storage -w -n storagerent 
 ```
 - 어느정도 시간이 흐른 후 (약 30초) 스케일 아웃이 벌어지는 것을 확인할 수 있다:
+![image](https://user-images.githubusercontent.com/84304082/124941011-6bbf5a80-e045-11eb-90dd-1652c76a1dff.png)
 
 - siege 의 로그를 보아도 전체적인 성공률이 높아진 것을 확인 할 수 있다. 
 ```
