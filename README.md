@@ -920,39 +920,40 @@ Shortest transaction:           0.00
 ** SIEGE 4.0.4
 ** Preparing 1 concurrent users for battle.
 The server is now under siege...
-HTTP/1.1 201     0.01 secs:     260 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.01 secs:     260 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.01 secs:     260 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.03 secs:     260 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.00 secs:     260 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.02 secs:     260 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.01 secs:     260 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.01 secs:     260 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.01 secs:     260 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.00 secs:     260 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.01 secs:     260 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.01 secs:     260 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.01 secs:     260 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.00 secs:     260 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.01 secs:     260 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.01 secs:     260 bytes ==> POST http://storage:8080/storages
+HTTP/1.1 201     0.01 secs:     283 bytes ==> POST http://storage:8080/storages
+HTTP/1.1 201     0.01 secs:     283 bytes ==> POST http://storage:8080/storages
+HTTP/1.1 201     0.01 secs:     283 bytes ==> POST http://storage:8080/storages
+HTTP/1.1 201     0.03 secs:     283 bytes ==> POST http://storage:8080/storages
+HTTP/1.1 201     0.00 secs:     283 bytes ==> POST http://storage:8080/storages
+HTTP/1.1 201     0.02 secs:     283 bytes ==> POST http://storage:8080/storages
+HTTP/1.1 201     0.01 secs:     283 bytes ==> POST http://storage:8080/storages
+HTTP/1.1 201     0.01 secs:     283 bytes ==> POST http://storage:8080/storages
+HTTP/1.1 201     0.01 secs:     283 bytes ==> POST http://storage:8080/storages
+HTTP/1.1 201     0.00 secs:     283 bytes ==> POST http://storage:8080/storages
+HTTP/1.1 201     0.01 secs:     283 bytes ==> POST http://storage:8080/storages
+HTTP/1.1 201     0.01 secs:     283 bytes ==> POST http://storage:8080/storages
+HTTP/1.1 201     0.01 secs:     283 bytes ==> POST http://storage:8080/storages
+HTTP/1.1 201     0.00 secs:     283 bytes ==> POST http://storage:8080/storages
+HTTP/1.1 201     0.01 secs:     283 bytes ==> POST http://storage:8080/storages
+HTTP/1.1 201     0.01 secs:     283 bytes ==> POST http://storage:8080/storages
 
 :
 :
 
 Lifting the server siege...
-Transactions:                   1139 hits
+Transactions:                   5005 hits
 Availability:                 100.00 %
-Elapsed time:                   9.19 secs
-Data transferred:               0.28 MB
-Response time:                  0.01 secs
-Transaction rate:             123.94 trans/sec
-Throughput:                     0.03 MB/sec
-Concurrency:                    0.98
-Successful transactions:        1139
+Elapsed time:                  19.55 secs
+Data transferred:               1.35 MB
+Response time:                  0.39 secs
+Transaction rate:             256.01 trans/sec
+Throughput:                     0.07 MB/sec
+Concurrency:                   99.32
+Successful transactions:        5005
 Failed transactions:               0
-Longest transaction:            0.04
-Shortest transaction:           0.00
+Longest transaction:            3.72
+Shortest transaction:           0.01
+
 
 ```
 
