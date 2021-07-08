@@ -1095,15 +1095,15 @@ Shortest transaction:           0.00
 ```
 ![image](https://user-images.githubusercontent.com/84304043/122863309-80210900-d35d-11eb-8e07-8113c4ca6af9.png)
 
-- payment 서비스에 Liveness Probe 설정을 추가한 payment_bomb.yaml 생성
+- payment 서비스에 Liveness Probe 설정을 추가한 deployment_yooho.yml 생성
 
 - kubectl describe pod storage -n storagerent 실행으로 확인
 ```
 # Liveness Probe 적용
-kubectl apply -f payment_bomb.yaml
+kubectl apply -f deployment_yooho.yml
 
 # 설정 확인
-kubectl get deploy payment -n bomtada -o yaml
+kubectl get deploy payment -n storagerent -o yaml
 
 ...
 template:
@@ -1113,7 +1113,7 @@ template:
         app: payment
     spec:
       containers:
-      - image: 879772956301.dkr.ecr.ap-southeast-1.amazonaws.com/user10-payment:bomb
+      - image: 223209618259.dkr.ecr.ap-northeast-1.amazonaws.com/payment:yooho
         imagePullPolicy: Always
         livenessProbe:
           failureThreshold: 5
@@ -1129,27 +1129,25 @@ template:
         ports:
         - containerPort: 8080
 ...
-컨테이너 실행 후 90초 동인은 정상이나 이후 /tmp/healthy 파일이 삭제되어 livenessProbe에서 실패를 리턴하게 됨
-pod 정상 상태 일때 pod 진입하여 /tmp/healthy 파일 생성해주면 정상 상태 유지됨
+
 ```
 - 메모리 과부하 발생
 ```
-kubectl exec -it siege -n bomtada -- /bin/bash
+kubectl exec -it siege -n storagerent -- /bin/bash
 
 # 메모리 과부하 API 호출
 http http://payment:8080/callmemleak
 
 # pod 상태 확인
-kubectl get po -w -n bomtada
+kubectl get po -w -n storagerent
 
 NAME                       READY   STATUS    RESTARTS   AGE
-claim-956c9b89d-m6jg6      1/1     Running   0          127m
-gateway-78678646b-fgwms    1/1     Running   0          127m
-payment-5b7444449f-mp4kf   1/1     Running   0          9m42s
-review-67b6fb4948-qcqrk    1/1     Running   0          127m
+storage-64b8c8cc47-wqkm5   1/1     Running   0          127m
+gateway-5b74879bc8-sktbk   1/1     Running   0          127m
+viewpage-67fdccd776-sbdmg  1/1     Running   0          127m
 siege                      1/1     Running   0          128m
-payment-5b7444449f-mp4kf   0/1     OOMKilled   0          10m
-payment-5b7444449f-mp4kf   1/1     Running     1          10m
+payment-5b659b7c8d-gj895   0/1     OOMKilled   0         10m
+payment-5b659b7c8d-gj895   1/1     Running     1         10m
 ```
 pod 상태 확인을 통해 payment서비스의 RESTARTS 횟수가 증가한 것을 확인할 수 있다.
 
