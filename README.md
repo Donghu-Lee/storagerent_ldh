@@ -214,7 +214,7 @@
 
 ## 헥사고날 아키텍처 다이어그램 도출
 
-![image](https://user-images.githubusercontent.com/84304043/122707112-4d5f0e00-d294-11eb-8157-0b102dfad907.png)
+![image](https://user-images.githubusercontent.com/84304082/124932232-da98b580-e03d-11eb-94b2-ea7f6e85a0e4.png)
 
     - Chris Richardson, MSA Patterns 참고하여 Inbound adaptor와 Outbound adaptor를 구분함
     - 호출관계에서 PubSub 과 Req/Resp 를 구분함
@@ -348,8 +348,8 @@
             ```     
           - Kubernetes에 생성된 Deploy. 확인
             
-![image](https://user-images.githubusercontent.com/84304043/122843390-4d194e00-d33a-11eb-82b9-d156fce642d0.png)
-	    
+![image](https://user-images.githubusercontent.com/84304082/124933792-1e3fef00-e03f-11eb-86a7-a6dfea1d8e6a.png)
+
             
       3. Kubernetes용 Service.yaml을 작성하고 Kubernetes에 Service/LoadBalancer을 생성하여 Gateway 엔드포인트를 확인함. 
           - Service.yaml 예시
