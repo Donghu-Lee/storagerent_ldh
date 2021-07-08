@@ -12,9 +12,6 @@ import java.util.List;
  @RestController
  public class StorageController {
 
-
-
-
 @RequestMapping(value = "/chkAndReqReserve",
         method = RequestMethod.GET,
         produces = "application/json;charset=UTF-8")
@@ -22,5 +19,10 @@ import java.util.List;
 public void chkAndReqReserve(HttpServletRequest request, HttpServletResponse response)
         throws Exception {
         System.out.println("##### /storage/chkAndReqReserve  called #####");
+            try {
+               Thread.currentThread().sleep((long) (400 + Math.random() * 220));
+           } catch (InterruptedException e) {
+               e.printStackTrace();
+           }
         }
  }
