@@ -271,7 +271,7 @@
 		- id: viewpage
 		  uri: http://viewpage:8085
 		  predicates:
-		    - Path= /storageviews/**
+		    - Path=/storageviews/**
 		- id: delivery
 		  uri: http://delivery:8086
 		  predicates:
@@ -316,7 +316,7 @@
 	    spec:
 	      containers:
 		- name: gateway
-		  image: 740569282574.dkr.ecr.ap-northeast-1.amazonaws.com/user02-gateway:v1
+		  image: 223209618259.dkr.ecr.ap-northeast-1.amazonaws.com/gateway:v1
 		  ports:
 		    - containerPort: 8080
             ```               
