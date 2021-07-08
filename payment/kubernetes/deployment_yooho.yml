@@ -1,0 +1,33 @@
+apiVersion: apps/yooho
+kind: Deployment
+metadata:
+  name: payment
+  namespace: storagerent
+  labels:
+    app: payment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: payment
+template:
+    metadata:
+      labels:
+        app: payment
+    spec:
+      containers:
+      - name: payment
+        image: 223209618259.dkr.ecr.ap-northeast-1.amazonaws.com/payment:yooho
+        ports:
+        - containerPort: 8080      
+        imagePullPolicy: Always
+        livenessProbe:
+          failureThreshold: 5 
+          httpGet:
+            path: /actuator/health
+            port: 8080
+            scheme: HTTP
+          initialDelaySeconds: 120
+          periodSeconds: 5
+          successThreshold: 1
+          timeoutSeconds: 2
