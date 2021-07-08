@@ -28,6 +28,10 @@ spring:
           uri: http://localhost:8085
           predicates:
             - Path= /storageviews/**
+        - id: delivery
+          uri: http://localhost:8086
+          predicates:
+            - Path= /deliverys/**            
       globalcors:
         corsConfigurations:
           '[/**]':
@@ -67,6 +71,10 @@ spring:
           uri: http://viewpage:8080
           predicates:
             - Path= /storageviews/**
+        - id: delivery
+          uri: http://delivery:8080
+          predicates:
+            - Path= /deliverys/**            
       globalcors:
         corsConfigurations:
           '[/**]':
