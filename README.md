@@ -24,6 +24,8 @@
     - [동기식 호출 / 서킷 브레이킹 / 장애격리](#동기식-호출-서킷-브레이킹-장애격리)
     - [오토스케일 아웃](#오토스케일-아웃)
     - [무정지 재배포](#무정지-재배포)
+    - [Self-healing](#Self-healing (Liveness Probe))
+    - [ConfigMap 사용](#ConfigMap 사용)
   - [신규 개발 조직의 추가](#신규-개발-조직의-추가)
 
 # 서비스 시나리오
@@ -219,6 +221,19 @@
 분석/설계 단계에서 도출된 헥사고날 아키텍처에 따라, 각 BC별로 대변되는 마이크로 서비스들을 스프링부트로 구현하였다. 구현한 각 서비스를 로컬에서 실행하는 방법은 아래와 같다 (각자의 포트넘버는 8081 ~ 808n 이다)
 
 ```
+   cd gateway
+   mvn spring-boot:run
+   cd message
+   mvn spring-boot:run
+   cd reservation
+   mvn spring-boot:run
+   cd viewpage
+   mvn spring-boot:run
+   cd payment
+   mvn spring-boot:run
+   cd storage
+   mvn spring-boot:run
+   cd delivery
    mvn spring-boot:run
 ```
 
@@ -402,27 +417,33 @@ http GET http://localhost:8088/reservations/1
 ![image](https://user-images.githubusercontent.com/84304043/122843763-31fb0e00-d33b-11eb-83f6-140191ec1a6d.png)
 - 예약 후 - 결제 상태
 ```
-http GET http://localhost:8088/payments/1
+http GET http://gateway:8080/payments/1
 ``` 
 ![image](https://user-images.githubusercontent.com/84304043/122843798-43441a80-d33b-11eb-92c4-160c77f6f3ef.png)
 - 예약 취소
 ```
-http PATCH localhost:8088/reservations/1 storageId=1 price=200000 reservationStatus="reqCancel"
+http PATCH gateway:8080/reservations/1 storageId=1 price=200000 reservationStatus="reqCancel"
 ``` 
 ![image](https://user-images.githubusercontent.com/84304043/122843840-57881780-d33b-11eb-88fe-61d8055ff1e0.png)
 - 예약 취소 후 - 창고 상태
 ```
-http GET http://localhost:8088/storages/1
+http GET http://gateway:8080/storages/1
 ``` 
 ![image](https://user-images.githubusercontent.com/84304043/122843892-6ec70500-d33b-11eb-9663-e4c894dff60b.png)
 - 예약 취소 후 - 예약 상태
 ```
-http GET http://localhost:8088/reservations/1
+http GET http://gateway:8080/reservations/1
 ``` 
 ![image](https://user-images.githubusercontent.com/84304043/122843932-856d5c00-d33b-11eb-88a9-921c14d97ed0.png)
 - 예약 취소 후 - 결제 상태
 ```
-http GET http://localhost:8088/payments/1
+http GET http://gateway:8080/payments/1
+``` 
+![image](https://user-images.githubusercontent.com/84304043/122843963-95853b80-d33b-11eb-8e0a-4831fa73a5b4.png)
+
+- 예약 후 - 운송요청 접수 상태
+```
+http GET http://gateway:8080/delivery/1
 ``` 
 ![image](https://user-images.githubusercontent.com/84304043/122843963-95853b80-d33b-11eb-8e0a-4831fa73a5b4.png)
 
@@ -634,7 +655,7 @@ http POST http://localhost:8088/storages description="storage1" price=200000 sto
 http POST localhost:8088/reservations storageId=1 price=200000 reservationStatus="reqReserve"
 
 # Payment 서비스 실행 후 창고대여
-http POST localhost:8088/reservations storageId=1 price=200000 reservationStatus="reqReserve"
+http POST http://gateway:8088/reservations storageId=1 price=200000 reservationStatus="reqReserve"
 
 # 창고대여 확인 
 http GET http://localhost:8088/reservations/1  
@@ -648,7 +669,7 @@ http GET http://localhost:8088/reservations/1
 ## 비동기식 호출 / 시간적 디커플링 / 장애격리 / 최종 (Eventual) 일관성 테스트
 
 
-결제가 이루어진 후에 숙소 시스템의 상태가 업데이트 되고, 예약 시스템의 상태가 업데이트 되며, 예약 및 취소 메시지가 전송되는 시스템과의 통신 행위는 비동기식으로 처리한다.
+결제가 이루어진 후에 창고 시스템의 상태가 업데이트 되고, 예약 시스템의 상태가 업데이트 되며, 예약 및 취소 메시지가 전송되는 시스템과의 통신 행위는 비동기식으로 처리한다.
  
 - 이를 위하여 결제가 승인되면 결제가 승인 되었다는 이벤트를 카프카로 송출한다. (Publish)
  
@@ -946,14 +967,14 @@ Shortest transaction:           0.00
 
 ![image](https://user-images.githubusercontent.com/84304043/122850814-d6378180-d348-11eb-9cd2-eb0873f1c8d7.png)
 
-- storage 서비스에 대한 replica 를 동적으로 늘려주도록 HPA 를 설정한다. 설정은 CPU 사용량이 50프로를 넘어서면 replica 를 10개까지 늘려준다:
+- storage 서비스에 대한 replica 를 동적으로 늘려주도록 HPA 를 설정한다. 설정은 CPU 사용량이 3프로를 넘어서면 replica 를 10개까지 늘려준다:
 ```
-kubectl autoscale deployment storage -n storagerent --cpu-percent=50 --min=1 --max=10
+kubectl autoscale deployment storage -n storagerent --cpu-percent=3 --min=1 --max=10
 ```
 
-- 부하를 동시사용자 100명, 1분 동안 걸어준다.
+- 부하를 동시사용자 100명, 2분 동안 걸어준다.
 ```
-siege -c100 -t60S -v --content-type "application/json" 'http://storage:8080/storages POST {"desc": "BigStorage"}'
+siege -c100 -t120S -v --content-type "application/json" 'http://storage:8080/storages POST {"desc": "BigStorage"}'
 ```
 - 오토스케일이 어떻게 되고 있는지 모니터링을 걸어둔다
 ```
@@ -989,7 +1010,7 @@ kubectl delete hpa storage -n storagerent
 
 - seige 로 배포작업 직전에 워크로드를 모니터링 함.
 ```
-siege -c100 -t60S -r10 -v --content-type "application/json" 'http://storage:8080/storages POST {"desc": "BigStorage"}'
+siege -c100 -t120S -r10 -v --content-type "application/json" 'http://storage:8080/storages POST {"desc": "BigStorage"}'
 
 ** SIEGE 4.0.4
 ** Preparing 1 concurrent users for battle.
@@ -1007,7 +1028,7 @@ HTTP/1.1 201     0.01 secs:     260 bytes ==> POST http://storage:8080/storags
 
 - 새버전으로의 배포 시작
 ```
-kubectl set image ...
+kubectl apply -f payment_na.yaml  # Readiness Probe 미설정 버전
 ```
 
 - seige 의 화면으로 넘어가서 Availability 가 100% 미만으로 떨어졌는지 확인
@@ -1034,6 +1055,7 @@ Shortest transaction:           0.00
 
 ```
 # deployment.yaml 의 readiness probe 의 설정:
+
 ```
 
 ![image](https://user-images.githubusercontent.com/84304043/122858339-156bcf80-d355-11eb-9d1a-91da438ac905.png)
@@ -1041,6 +1063,7 @@ Shortest transaction:           0.00
 
 ```
 kubectl apply -f kubernetes/deployment.yml
+kubectl apply -f payment.yaml  # Readiness Probe 설정 버전
 ```
 
 - 동일한 시나리오로 재배포 한 후 Availability 확인:
@@ -1067,244 +1090,75 @@ Shortest transaction:           0.00
 # Self-healing (Liveness Probe)
 - storage deployment.yml 파일 수정 
 ```
-콘테이너 실행 후 /tmp/healthy 파일을 만들고 
-90초 후 삭제
-livenessProbe에 'cat /tmp/healthy'으로 검증하도록 함
+메모리 과부하를 발생시키는 API를 payment 서비스에 추가하여, 임의로 서비스가 동작하지 않는 상황을 만든다. 그 후 LivenessProbe 설정에 의하여 자동으로 서비스가 재시작되는지 확인한다.
+
 ```
 ![image](https://user-images.githubusercontent.com/84304043/122863309-80210900-d35d-11eb-8e07-8113c4ca6af9.png)
 
+- payment 서비스에 Liveness Probe 설정을 추가한 payment_bomb.yaml 생성
+
 - kubectl describe pod storage -n storagerent 실행으로 확인
 ```
+# Liveness Probe 적용
+kubectl apply -f payment_bomb.yaml
+
+# 설정 확인
+kubectl get deploy payment -n bomtada -o yaml
+
+...
+template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: payment
+    spec:
+      containers:
+      - image: 879772956301.dkr.ecr.ap-southeast-1.amazonaws.com/user10-payment:bomb
+        imagePullPolicy: Always
+        livenessProbe:
+          failureThreshold: 5
+          httpGet:
+            path: /actuator/health
+            port: 8080
+            scheme: HTTP
+          initialDelaySeconds: 120
+          periodSeconds: 5
+          successThreshold: 1
+          timeoutSeconds: 2
+        name: payment
+        ports:
+        - containerPort: 8080
+...
 컨테이너 실행 후 90초 동인은 정상이나 이후 /tmp/healthy 파일이 삭제되어 livenessProbe에서 실패를 리턴하게 됨
 pod 정상 상태 일때 pod 진입하여 /tmp/healthy 파일 생성해주면 정상 상태 유지됨
 ```
+- 메모리 과부하 발생
+```
+kubectl exec -it siege -n bomtada -- /bin/bash
+
+# 메모리 과부하 API 호출
+http http://payment:8080/callmemleak
+
+# pod 상태 확인
+kubectl get po -w -n bomtada
+
+NAME                       READY   STATUS    RESTARTS   AGE
+claim-956c9b89d-m6jg6      1/1     Running   0          127m
+gateway-78678646b-fgwms    1/1     Running   0          127m
+payment-5b7444449f-mp4kf   1/1     Running   0          9m42s
+review-67b6fb4948-qcqrk    1/1     Running   0          127m
+siege                      1/1     Running   0          128m
+payment-5b7444449f-mp4kf   0/1     OOMKilled   0          10m
+payment-5b7444449f-mp4kf   1/1     Running     1          10m
+```
+pod 상태 확인을 통해 payment서비스의 RESTARTS 횟수가 증가한 것을 확인할 수 있다.
 
 # Config Map/ Persistence Volume
-- Persistence Volume
+- Config Map 사용
 
-1: EFS 생성
+1: cofigmap.yml 파일 생성
 ```
-EFS 생성 시 클러스터의 VPC를 선택해야함
-```
-![클러스터의 VPC를 선택해야함](https://user-images.githubusercontent.com/38099203/119364089-85048580-bce9-11eb-8001-1c20a93b8e36.PNG)
-
-![EFS생성](https://user-images.githubusercontent.com/38099203/119343415-60041880-bcd1-11eb-9c25-1695c858f6aa.PNG)
-
-2. EFS 계정 생성 및 ROLE 바인딩
-```
-kubectl apply -f efs-sa.yml
-
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: efs-provisioner
-  namespace: storagerent
-
-
-kubectl get ServiceAccount efs-provisioner -n airbnb
-NAME              SECRETS   AGE
-efs-provisioner   1         9m1s  
-  
-  
-  
-kubectl apply -f efs-rbac.yaml
-
-namespace를 반드시 수정해야함
-
-  
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: efs-provisioner-runner
-  namespace: storagerent
-rules:
-  - apiGroups: [""]
-    resources: ["persistentvolumes"]
-    verbs: ["get", "list", "watch", "create", "delete"]
-  - apiGroups: [""]
-    resources: ["persistentvolumeclaims"]
-    verbs: ["get", "list", "watch", "update"]
-  - apiGroups: ["storage.k8s.io"]
-    resources: ["storageclasses"]
-    verbs: ["get", "list", "watch"]
-  - apiGroups: [""]
-    resources: ["events"]
-    verbs: ["create", "update", "patch"]
----
-kind: ClusterRoleBinding
-apiVersion: rbac.authorization.k8s.io/v1
-metadata:
-  name: run-efs-provisioner
-  namespace: storagerent
-subjects:
-  - kind: ServiceAccount
-    name: efs-provisioner
-     # replace with namespace where provisioner is deployed
-    namespace: storagerent
-roleRef:
-  kind: ClusterRole
-  name: efs-provisioner-runner
-  apiGroup: rbac.authorization.k8s.io
----
-kind: Role
-apiVersion: rbac.authorization.k8s.io/v1
-metadata:
-  name: leader-locking-efs-provisioner
-  namespace: storagerent
-rules:
-  - apiGroups: [""]
-    resources: ["endpoints"]
-    verbs: ["get", "list", "watch", "create", "update", "patch"]
----
-kind: RoleBinding
-apiVersion: rbac.authorization.k8s.io/v1
-metadata:
-  name: leader-locking-efs-provisioner
-  namespace: storagerent
-subjects:
-  - kind: ServiceAccount
-    name: efs-provisioner
-    # replace with namespace where provisioner is deployed
-    namespace: storagerent
-roleRef:
-  kind: Role
-  name: leader-locking-efs-provisioner
-  apiGroup: rbac.authorization.k8s.io
-
-
-```
-
-3. EFS Provisioner 배포
-```
-kubectl apply -f efs-provisioner-deploy.yml
-
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: efs-provisioner
-  namespace: storagerent
-spec:
-  replicas: 1
-  strategy:
-    type: Recreate
-  selector:
-    matchLabels:
-      app: efs-provisioner
-  template:
-    metadata:
-      labels:
-        app: efs-provisioner
-    spec:
-      serviceAccount: efs-provisioner
-      containers:
-        - name: efs-provisioner
-          image: quay.io/external_storage/efs-provisioner:latest
-          env:
-            - name: FILE_SYSTEM_ID
-              value: fs-562f9c36
-            - name: AWS_REGION
-              value: ap-northeast-2
-            - name: PROVISIONER_NAME
-              value: my-aws.com/aws-efs
-          volumeMounts:
-            - name: pv-volume
-              mountPath: /persistentvolumes
-      volumes:
-        - name: pv-volume
-          nfs:
-            server: fs-562f9c36.efs.ap-northeast-2.amazonaws.com
-            path: /
-
-
-kubectl get Deployment efs-provisioner -n airbnb
-NAME              READY   UP-TO-DATE   AVAILABLE   AGE
-efs-provisioner   1/1     1            1           11m
-
-```
-
-4. 설치한 Provisioner를 storageclass에 등록
-```
-kubectl apply -f efs-storageclass.yml
-
-
-kind: StorageClass
-apiVersion: storage.k8s.io/v1
-metadata:
-  name: aws-efs
-  namespace: storagerent
-provisioner: my-aws.com/aws-efs
-
-
-kubectl get sc aws-efs -n storagerent
-NAME            PROVISIONER             RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
-aws-efs         my-aws.com/aws-efs      Delete          Immediate              false                  4s
-```
-
-5. PVC(PersistentVolumeClaim) 생성
-```
-kubectl apply -f volume-pvc.yml
-
-
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: aws-efs
-  namespace: storagerent
-  labels:
-    app: test-pvc
-spec:
-  accessModes:
-  - ReadWriteMany
-  resources:
-    requests:
-      storage: 6Ki
-  storageClassName: aws-efs
-  
-  
-kubectl get pvc aws-efs -n storagerent
-NAME      STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   AGE
-aws-efs   Bound    pvc-43f6fe12-b9f3-400c-ba20-b357c1639f00   6Ki        RWX            aws-efs        4m44s
-```
-
-6. storage pod 적용
-```
-kubectl apply -f deployment.yml
-```
-![pod with pvc](https://user-images.githubusercontent.com/38099203/119349966-bd9c6300-bcd9-11eb-9f6d-08e4a3ec82f0.PNG)
-
-
-7. A pod에서 마운트된 경로에 파일을 생성하고 B pod에서 파일을 확인함
-```
-NAME                              READY   STATUS    RESTARTS   AGE
-efs-provisioner-f4f7b5d64-lt7rz   1/1     Running   0          14m
-storage-5df66d6674-n6b7n             1/1     Running   0          109s
-storage-5df66d6674-pl25l             1/1     Running   0          109s
-siege                             1/1     Running   0          2d1h
-
-
-kubectl exec -it pod/storage-5df66d6674-n6b7n storage -n storagerent -- /bin/sh
-/ # cd /mnt/aws
-/mnt/aws # touch intensive_course_work
-```
-![a pod에서 파일생성](https://user-images.githubusercontent.com/38099203/119372712-9736f180-bcf2-11eb-8e57-1d6e3f4273a5.PNG)
-
-```
-kubectl exec -it pod/storage-5df66d6674-pl25l storage -n storagerent -- /bin/sh
-/ # cd /mnt/aws
-/mnt/aws # ls -al
-total 8
-drwxrws--x    2 root     2000          6144 May 24 15:44 .
-drwxr-xr-x    1 root     root            17 May 24 15:42 ..
--rw-r--r--    1 root     2000             0 May 24 15:44 intensive_course_work
-```
-![b pod에서 파일생성 확인](https://user-images.githubusercontent.com/38099203/119373196-204e2880-bcf3-11eb-88f0-a1e91a89088a.PNG)
-
-
-- Config Map
-
-1: cofingmap.yml 파일 생성
-```
-kubectl apply -f cofingmap.yml
+kubectl apply -f cofigmap.yml
 
 
 apiVersion: v1
