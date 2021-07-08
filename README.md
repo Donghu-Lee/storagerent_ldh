@@ -816,34 +816,47 @@ codebuild 프로젝트 및 빌드 이력
 
 ## 동기식 호출 / 서킷 브레이킹 / 장애격리
 
-* 서킷 브레이킹: Hystrix 사용하여 구현함
+* 서킷 브레이킹: Spring FeignClient + Hystrix 옵션을 사용하여 구현함
 
 시나리오는 예약(reservation)--> 창고(storage) 시의 연결을 RESTful Request/Response 로 연동하여 구현이 되어있고, 예약 요청이 과도할 경우 CB 를 통하여 장애격리.
 
-- DestinationRule 를 생성하여 circuit break 가 발생할 수 있도록 설정
-최소 connection pool 설정
+* Hystrix 를 설정: 요청처리 쓰레드에서 처리시간이 610 밀리가 넘어서기 시작하여 어느정도 유지되면 CB 회로가 닫히도록 (요청을 빠르게 실패처리, 차단) 설정
 ```
-# destination-rule.yml
-apiVersion: networking.istio.io/v1alpha3
-kind: DestinationRule
-metadata:
-  name: dr-storage
-  namespace: storagerent
-spec:
-  host: storage
-  trafficPolicy:
-    connectionPool:
-      http:
-        http1MaxPendingRequests: 1
-        maxRequestsPerConnection: 1
-#    outlierDetection:
-#      interval: 1s
-#      consecutiveErrors: 1
-#      baseEjectionTime: 10s
-#      maxEjectionPercent: 100
+# (reservation) application.yml
+
+feign:
+  hystrix:
+    enabled: true
+    
+hystrix:
+  command:
+    # 전역설정
+    default:
+      execution.isolation.thread.timeoutInMilliseconds: 610
 ```
+* 피호출 서비스 (창고:예약요청) 의 임의 부하 처리 - 400 밀리에서 증감 220 밀리 정도 왔다갔다 하게
 
+```
+# (예약요청) StorageController.java    
+ @RestController
+ public class StorageController {
 
+@RequestMapping(value = "/chkAndReqReserve",
+        method = RequestMethod.GET,
+        produces = "application/json;charset=UTF-8")
+
+public void chkAndReqReserve(HttpServletRequest request, HttpServletResponse response)
+        throws Exception {
+        System.out.println("##### /storage/chkAndReqReserve  called #####");
+            try {
+               Thread.currentThread().sleep((long) (400 + Math.random() * 220));
+           } catch (InterruptedException e) {
+               e.printStackTrace();
+           }
+        }
+ }
+    
+```
 * 부하테스터 siege 툴을 통한 서킷 브레이커 동작 확인:
 
 siege 실행
@@ -853,111 +866,116 @@ kubectl run siege --image=apexacme/siege-nginx -n storagerent
 kubectl exec -it siege -c siege -n storagerent -- /bin/bash
 ```
 
-- 동시사용자 1로 부하 생성 시 모두 정상
+- 동시사용자 100로 부하 생성 시 모두 정상
 ```
-siege -c1 -t10S -v --content-type "application/json" 'http://storage:8080/storages POST {"desc": "BigStorage"}'
+siege -c100 -t60S -r10 -v --content-type "application/json" 'http://reservation:8080/reservations POST {"storageId": "1"}'
+
 
 ** SIEGE 4.0.4
 ** Preparing 1 concurrent users for battle.
 The server is now under siege...
-HTTP/1.1 201     0.49 secs:     283 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.05 secs:     283 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.02 secs:     283 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.03 secs:     283 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.02 secs:     283 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.02 secs:     283 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.03 secs:     283 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.03 secs:     283 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.03 secs:     283 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.03 secs:     283 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.03 secs:     283 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.02 secs:     283 bytes ==> POST http://storage:8080/storages
+HTTP/1.1 201     1.30 secs:     255 bytes ==> POST http://reservation:8080/reservations
+HTTP/1.1 201     1.03 secs:     255 bytes ==> POST http://reservation:8080/reservations
+HTTP/1.1 201     1.03 secs:     255 bytes ==> POST http://reservation:8080/reservations
+HTTP/1.1 201     1.02 secs:     255 bytes ==> POST http://reservation:8080/reservations
+HTTP/1.1 201     1.04 secs:     255 bytes ==> POST http://reservation:8080/reservations
+HTTP/1.1 201     1.03 secs:     255 bytes ==> POST http://reservation:8080/reservations
+HTTP/1.1 201     1.02 secs:     255 bytes ==> POST http://reservation:8080/reservations
+HTTP/1.1 201     1.02 secs:     255 bytes ==> POST http://reservation:8080/reservations
+HTTP/1.1 201     1.02 secs:     255 bytes ==> POST http://reservation:8080/reservations
+HTTP/1.1 201     1.03 secs:     257 bytes ==> POST http://reservation:8080/reservations
+HTTP/1.1 201     1.03 secs:     257 bytes ==> POST http://reservation:8080/reservations
+HTTP/1.1 201     1.02 secs:     257 bytes ==> POST http://reservation:8080/reservations
+HTTP/1.1 201     1.02 secs:     257 bytes ==> POST http://reservation:8080/reservations
+HTTP/1.1 201     1.01 secs:     257 bytes ==> POST http://reservation:8080/reservations
+HTTP/1.1 201     1.02 secs:     257 bytes ==> POST http://reservation:8080/reservations
 ```
 
-- 동시사용자 2로 부하 생성 시 503 에러 168개 발생
+* 요청이 과도하여 CB를 동작함 요청을 차단
 ```
-siege -c2 -t10S -v --content-type "application/json" 'http://storage:8080/storages POST {"desc": "Beautiful House3"}'
 
-** SIEGE 4.0.4
-** Preparing 2 concurrent users for battle.
-The server is now under siege...
-HTTP/1.1 201     0.02 secs:     283 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.02 secs:     283 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 503     0.10 secs:      81 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.02 secs:     283 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.04 secs:     283 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.05 secs:     283 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.22 secs:     283 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.08 secs:     283 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.07 secs:     283 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 503     0.01 secs:      81 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.01 secs:     283 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.03 secs:     283 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.02 secs:     283 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.01 secs:     283 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.02 secs:     283 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 503     0.01 secs:      81 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.01 secs:     283 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.02 secs:     283 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.02 secs:     283 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.02 secs:     283 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 503     0.00 secs:      81 bytes ==> POST http://storage:8080/storages
+HTTP/1.1 201     2.68 secs:     261 bytes ==> POST http://reservation:8080/reservations
+HTTP/1.1 201     2.73 secs:     261 bytes ==> POST http://reservation:8080/reservations
+HTTP/1.1 201     2.69 secs:     261 bytes ==> POST http://reservation:8080/reservations
+HTTP/1.1 201     2.89 secs:     261 bytes ==> POST http://reservation:8080/reservations
+HTTP/1.1 201     2.67 secs:     261 bytes ==> POST http://reservation:8080/reservations
+HTTP/1.1 201     2.58 secs:     261 bytes ==> POST http://reservation:8080/reservations
+HTTP/1.1 201     2.90 secs:     261 bytes ==> POST http://reservation:8080/reservations
+HTTP/1.1 201     2.72 secs:     261 bytes ==> POST http://reservation:8080/reservations
+HTTP/1.1 201     2.65 secs:     261 bytes ==> POST http://reservation:8080/reservations
+HTTP/1.1 201     2.84 secs:     261 bytes ==> POST http://reservation:8080/reservations
+HTTP/1.1 201     2.69 secs:     261 bytes ==> POST http://reservation:8080/reservations
+HTTP/1.1 201     2.53 secs:     261 bytes ==> POST http://reservation:8080/reservations
+HTTP/1.1 201     2.74 secs:     261 bytes ==> POST http://reservation:8080/reservations
+HTTP/1.1 201     2.73 secs:     261 bytes ==> POST http://reservation:8080/reservations
+HTTP/1.1 201     2.61 secs:     261 bytes ==> POST http://reservation:8080/reservations
+HTTP/1.1 201     2.73 secs:     261 bytes ==> POST http://reservation:8080/reservations
+HTTP/1.1 201     2.80 secs:     261 bytes ==> POST http://reservation:8080/reservations
 
+```
+* 요청을 어느정도 돌려보내고나니, 기존에 밀린 일들이 처리되었고, 회로를 닫아 요청을 다시 받기 시작
+```
+
+HTTP/1.1 201     2.73 secs:     261 bytes ==> POST http://reservation:8080/reservations
+HTTP/1.1 201     2.80 secs:     261 bytes ==> POST http://reservation:8080/reservations
+HTTP/1.1 201     2.74 secs:     261 bytes ==> POST http://reservation:8080/reservations
+HTTP/1.1 201     2.84 secs:     261 bytes ==> POST http://reservation:8080/reservations
+HTTP/1.1 201     2.80 secs:     261 bytes ==> POST http://reservation:8080/reservations
+HTTP/1.1 201     2.71 secs:     261 bytes ==> POST http://reservation:8080/reservations
+HTTP/1.1 201     2.77 secs:     261 bytes ==> POST http://reservation:8080/reservations
+HTTP/1.1 201     2.81 secs:     261 bytes ==> POST http://reservation:8080/reservations
+HTTP/1.1 201     2.63 secs:     261 bytes ==> POST http://reservation:8080/reservations
+HTTP/1.1 201     2.85 secs:     261 bytes ==> POST http://reservation:8080/reservations
+HTTP/1.1 201     2.76 secs:     261 bytes ==> POST http://reservation:8080/reservations
+HTTP/1.1 201     2.63 secs:     261 bytes ==> POST http://reservation:8080/reservations
+HTTP/1.1 201     2.86 secs:     261 bytes ==> POST http://reservation:8080/reservations
+HTTP/1.1 201     2.42 secs:     261 bytes ==> POST http://reservation:8080/reservations
+HTTP/1.1 201     2.49 secs:     261 bytes ==> POST http://reservation:8080/reservations
+
+```
+* 다시 요청이 쌓이기 시작하여 건당 처리시간이 지연이 보이기 시작 => 회로 열기 => 요청 실패처리
+```
+HTTP/1.1 201     3.21 secs:     261 bytes ==> POST http://reservation:8080/reservations
+HTTP/1.1 201     3.27 secs:     261 bytes ==> POST http://reservation:8080/reservations
+HTTP/1.1 201     3.22 secs:     261 bytes ==> POST http://reservation:8080/reservations
+HTTP/1.1 201     3.30 secs:     261 bytes ==> POST http://reservation:8080/reservations
+HTTP/1.1 201     3.28 secs:     261 bytes ==> POST http://reservation:8080/reservations
+HTTP/1.1 201     3.20 secs:     261 bytes ==> POST http://reservation:8080/reservations
+HTTP/1.1 201     3.27 secs:     261 bytes ==> POST http://reservation:8080/reservations
+HTTP/1.1 201     3.30 secs:     261 bytes ==> POST http://reservation:8080/reservations
+HTTP/1.1 201     3.26 secs:     261 bytes ==> POST http://reservation:8080/reservations
+HTTP/1.1 201     3.26 secs:     261 bytes ==> POST http://reservation:8080/reservations
+HTTP/1.1 201     3.31 secs:     261 bytes ==> POST http://reservation:8080/reservations
+HTTP/1.1 201     3.24 secs:     261 bytes ==> POST http://reservation:8080/reservations
+HTTP/1.1 201     3.28 secs:     261 bytes ==> POST http://reservation:8080/reservations
+HTTP/1.1 201     3.30 secs:     261 bytes ==> POST http://reservation:8080/reservations
+HTTP/1.1 201     3.28 secs:     261 bytes ==> POST http://reservation:8080/reservations
+HTTP/1.1 201     3.32 secs:     261 bytes ==> POST http://reservation:8080/reservations
+HTTP/1.1 201     3.25 secs:     261 bytes ==> POST http://reservation:8080/reservations
+HTTP/1.1 201     3.06 secs:     261 bytes ==> POST http://reservation:8080/reservations
+HTTP/1.1 201     3.35 secs:     261 bytes ==> POST http://reservation:8080/reservations
+HTTP/1.1 201     3.32 secs:     261 bytes ==> POST http://reservation:8080/reservations
+HTTP/1.1 201     3.26 secs:     261 bytes ==> POST http://reservation:8080/reservations
+
+```
+* 생각보다 빨리 상태 호전됨 - (건당 (쓰레드당) 처리시간이 줄어들면서 회복) => 요청 수락
+
+- 반복적으로 진행되나 정상 운영됨
+
+```
 Lifting the server siege...
-Transactions:                   1904 hits
-Availability:                  91.89 %
-Elapsed time:                   9.89 secs
-Data transferred:               0.48 MB
-Response time:                  0.01 secs
-Transaction rate:             192.52 trans/sec
-Throughput:                     0.05 MB/sec
-Concurrency:                    1.98
-Successful transactions:        1904
-Failed transactions:             168
-Longest transaction:            0.03
-Shortest transaction:           0.00
-```
-
-
-- 다시 최소 Connection pool로 부하 다시 정상 확인
-
-```
-** SIEGE 4.0.4
-** Preparing 1 concurrent users for battle.
-The server is now under siege...
-HTTP/1.1 201     0.01 secs:     283 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.01 secs:     283 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.01 secs:     283 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.03 secs:     283 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.00 secs:     283 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.02 secs:     283 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.01 secs:     283 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.01 secs:     283 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.01 secs:     283 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.00 secs:     283 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.01 secs:     283 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.01 secs:     283 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.01 secs:     283 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.00 secs:     283 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.01 secs:     283 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.01 secs:     283 bytes ==> POST http://storage:8080/storages
-
-:
-:
-
-Lifting the server siege...
-Transactions:                   5005 hits
-Availability:                 100.00 %
-Elapsed time:                  19.55 secs
-Data transferred:               1.35 MB
-Response time:                  0.39 secs
-Transaction rate:             256.01 trans/sec
-Throughput:                     0.07 MB/sec
-Concurrency:                   99.32
-Successful transactions:        5005
-Failed transactions:               0
-Longest transaction:            3.72
-Shortest transaction:           0.01
+Transactions:		        1042 hits
+Availability:		       75.17 %
+Elapsed time:		       59.99 secs
+Data transferred:	        0.21 MB
+Response time:		        5.48 secs
+Transaction rate:	       17.49 trans/sec
+Throughput:		        0.00 MB/sec
+Concurrency:		       95.89
+Successful transactions:        1042
+Failed transactions:	         557
+Longest transaction:	        8.30
+Shortest transaction:	        0.01
 
 
 ```
@@ -971,7 +989,7 @@ Shortest transaction:           0.01
 
 - storage deployment.yml 파일에 resources 설정을 추가한다
 
-![image](https://user-images.githubusercontent.com/84304043/122850814-d6378180-d348-11eb-9cd2-eb0873f1c8d7.png)
+![image](https://user-images.githubusercontent.com/84304082/124942538-b097c100-e046-11eb-8cfc-e15daeb7c196.png)
 
 - storage 서비스에 대한 replica 를 동적으로 늘려주도록 HPA 를 설정한다. 설정은 CPU 사용량이 20프로를 넘어서면 replica 를 3개까지 늘려준다:
 ```
@@ -986,24 +1004,25 @@ siege -c100 -t120S -v --content-type "application/json" 'http://storage:8080/sto
 ```
 kubectl get deploy storage -w -n storagerent 
 ```
-- 어느정도 시간이 흐른 후 (약 30초) 스케일 아웃이 벌어지는 것을 확인할 수 있다:
+- 어느정도 시간이 흐른 후 (약 5초) 스케일 아웃이 벌어지는 것을 확인할 수 있다:
 ![image](https://user-images.githubusercontent.com/84304082/124941011-6bbf5a80-e045-11eb-90dd-1652c76a1dff.png)
 
 - siege 의 로그를 보아도 전체적인 성공률이 높아진 것을 확인 할 수 있다. 
 ```
 Lifting the server siege...
-Transactions:                  15615 hits
+Transactions:                   5959 hits
 Availability:                 100.00 %
-Elapsed time:                  59.44 secs
-Data transferred:               3.90 MB
-Response time:                  0.32 secs
-Transaction rate:             262.70 trans/sec
-Throughput:                     0.07 MB/sec
-Concurrency:                   85.04
-Successful transactions:       15675
+Elapsed time:                  14.57 secs
+Data transferred:               1.61 MB
+Response time:                  0.17 secs
+Transaction rate:             408.99 trans/sec
+Throughput:                     0.11 MB/sec
+Concurrency:                   70.21
+Successful transactions:        5960
 Failed transactions:               0
-Longest transaction:            2.55
-Shortest transaction:           0.01
+Longest transaction:            1.69
+Shortest transaction:           0.00
+
 ```
 
 ## 무정지 재배포
