@@ -830,30 +830,9 @@ curl -L https://istio.io/downloadIstio | ISTIO_VERSION=1.7.1 TARGET_ARCH=x86_64 
 cd istio-1.7.1
 export PATH=$PWD/bin:$PATH
 istioctl install --set profile=demo --set hub=gcr.io/istio-release
-"note : there are other profiles for production or performance testing."
-Istio 모니터링 툴(Telemetry Applications) 설치
-vi samples/addons/kiali.yaml
-4라인의
-apiVersion: apiextensions.k8s.io/v1beta1 을
-apiVersion: apiextensions.k8s.io/v1으로 수정
-kubectl apply -f samples/addons
-kiali.yaml 오류발생시, 아래 명령어 실행
-kubectl apply -f https://raw.githubusercontent.com/istio/istio/release-1.7/samples/addons/kiali.yaml
-모니터링(Tracing & Monitoring) 툴 설정
-Monitoring Server - Kiali
-기본 ServiceType 변경 : ClusterIP를 LoadBalancer 로…
-kubectl edit svc kiali -n istio-system
-:%s/ClusterIP/LoadBalancer/g
-:wq!
-모니터링 시스템(kiali) 접속 :
-EXTERNAL-IP:20001 (admin/admin)
-Tracing Server - Jaeger
 
-기본 ServiceType 변경 : ClusterIP를 LoadBalancer 로…
-kubectl edit svc tracing -n istio-system
-:%s/ClusterIP/LoadBalancer/g
-:wq!
-분산추적 시스템(tracing) 접속 : EXTERNAL-IP:80
+kubectl apply -f samples/addons
+
 설치확인
 kubectl get all -n istio-system
 ```
@@ -870,39 +849,12 @@ kubectl label namespace storagerent istio-injection=enabled
 - 동시사용자 100명
 - 20초 동안 실시
 ```
-root@siege:/# siege -c100 -t20S -v --content-type "application/json" 'http://gateway:8080/storages POST {"desc": "BigStorage"}' 
-
-HTTP/1.1 404     0.06 secs:     111 bytes ==> POST http://gateway:8080/storages
-HTTP/1.1 404     0.04 secs:     111 bytes ==> POST http://gateway:8080/storages
-HTTP/1.1 404     0.04 secs:     111 bytes ==> POST http://gateway:8080/storages
-HTTP/1.1 404     0.06 secs:     111 bytes ==> POST http://gateway:8080/storages
-HTTP/1.1 404     0.03 secs:     111 bytes ==> POST http://gateway:8080/storages
-HTTP/1.1 404     0.04 secs:     111 bytes ==> POST http://gateway:8080/storages
-HTTP/1.1 404     0.04 secs:     111 bytes ==> POST http://gateway:8080/storages
-HTTP/1.1 404     0.06 secs:     111 bytes ==> POST http://gateway:8080/storages
-HTTP/1.1 404     0.02 secs:     111 bytes ==> POST http://gateway:8080/storages
-HTTP/1.1 404     0.06 secs:     111 bytes ==> POST http://gateway:8080/storages
-HTTP/1.1 404     0.02 secs:     111 bytes ==> POST http://gateway:8080/storages
-HTTP/1.1 404     0.02 secs:     111 bytes ==> POST http://gateway:8080/storages
-HTTP/1.1 404     0.06 secs:     111 bytes ==> POST http://gateway:8080/storages
-
-
-Lifting the server siege...
-Transactions:                  35296 hits
-Availability:                 100.00 %
-Elapsed time:                  19.87 secs
-Data transferred:               3.74 MB
-Response time:                  0.06 secs
-Transaction rate:            1776.35 trans/sec
-Throughput:                     0.19 MB/sec
-Concurrency:                   99.47
-Successful transactions:        35296
-Failed transactions:               0
-Longest transaction:            0.92
-Shortest transaction:           0.02
-3
+root@siege:/# siege -c100 -t20S -v --content-type "application/json" 'http://gateway:8080/storages POST {"desc": "DongChango"}' 
 
 ```
+![image](https://user-images.githubusercontent.com/84304082/125024625-1b371400-e0bc-11eb-84fd-c29275a4e4ad.png)
+
+
 - 서킷 브레이킹을 위한 DestinationRule 적용
 ```
 # destination-rule.yml
@@ -923,7 +875,7 @@ spec:
 ```
 $kubectl apply -f destination-rule.yml
 
-root@siege:/# siege -c50 -t20S -v --content-type "application/json" 'http://gateway:8080/storages POST {"desc": "BigStorage"}' 
+root@siege:/# siege -c50 -t20S -v --content-type "application/json" 'http://gateway:8080/storages POST {"desc": "DongChango"}' 
 ```
 ![image](https://user-images.githubusercontent.com/84304082/125023978-e24a6f80-e0ba-11eb-99ca-1653a34bb7d2.png)
 
@@ -934,7 +886,7 @@ root@siege:/# siege -c50 -t20S -v --content-type "application/json" 'http://gate
 ```
 kubectl delete -f destination-rule.yml
 ```
-![image](https://user-images.githubusercontent.com/84304082/125024625-1b371400-e0bc-11eb-84fd-c29275a4e4ad.png)
+
 
 
 ### 오토스케일 아웃
@@ -951,7 +903,7 @@ kubectl autoscale deployment storage -n storagerent --cpu-percent=20 --min=1 --m
 
 - 부하를 동시사용자 100명, 15초 동안 걸어준다.
 ```
-siege -c100 -t15S -v --content-type "application/json" 'http://storage:8080/storages POST {"desc": "BigStorage"}'
+siege -c100 -t15S -v --content-type "application/json" 'http://storage:8080/storages POST {"desc": "DongChango"}'
 ```
 - 오토스케일이 어떻게 되고 있는지 모니터링을 걸어둔다
 ```
