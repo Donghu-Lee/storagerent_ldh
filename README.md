@@ -894,7 +894,7 @@ Successful transactions:        35296
 Failed transactions:               0
 Longest transaction:            0.92
 Shortest transaction:           0.02
-
+3
 
 ```
 - 서킷 브레이킹을 위한 DestinationRule 적용
@@ -964,9 +964,9 @@ kubectl delete -f destination-rule.yml
 kubectl autoscale deployment storage -n storagerent --cpu-percent=20 --min=1 --max=3
 ```
 
-- 부하를 동시사용자 100명, 2분 동안 걸어준다.
+- 부하를 동시사용자 100명, 15초 동안 걸어준다.
 ```
-siege -c100 -t120S -v --content-type "application/json" 'http://storage:8080/storages POST {"desc": "BigStorage"}'
+siege -c100 -t15S -v --content-type "application/json" 'http://storage:8080/storages POST {"desc": "BigStorage"}'
 ```
 - 오토스케일이 어떻게 되고 있는지 모니터링을 걸어둔다
 ```
@@ -978,17 +978,17 @@ kubectl get deploy storage -w -n storagerent
 - siege 의 로그를 보아도 전체적인 성공률이 높아진 것을 확인 할 수 있다. 
 ```
 Lifting the server siege...
-Transactions:                   5959 hits
+Transactions:                  28902 hits
 Availability:                 100.00 %
-Elapsed time:                  14.57 secs
-Data transferred:               1.61 MB
-Response time:                  0.17 secs
-Transaction rate:             408.99 trans/sec
-Throughput:                     0.11 MB/sec
-Concurrency:                   70.21
-Successful transactions:        5960
+Elapsed time:                  14.50 secs
+Data transferred:               3.06 MB
+Response time:                  0.05 secs
+Transaction rate:            1993.24 trans/sec
+Throughput:                     0.21 MB/sec
+Concurrency:                   98.74
+Successful transactions:           0
 Failed transactions:               0
-Longest transaction:            1.69
+Longest transaction:            0.27
 Shortest transaction:           0.00
 
 ```
@@ -1004,7 +1004,7 @@ kubectl delete hpa storage -n storagerent
 
 - seige 로 배포작업 직전에 워크로드를 모니터링 함.
 ```
-siege -c100 -t120S -r10 -v --content-type "application/json" 'http://storage:8080/storages POST {"desc": "BigStorage"}'
+siege -c50 -t30S -r10 -v --content-type "application/json" 'http://storage:8080/storages POST {"desc": "BigStorage"}'
 
 ** SIEGE 4.0.4
 ** Preparing 1 concurrent users for battle.
@@ -1028,10 +1028,10 @@ kubectl apply -f payment_na.yaml  # Readiness Probe 미설정 버전
 - seige 의 화면으로 넘어가서 Availability 가 100% 미만으로 떨어졌는지 확인
 
 ```
-siege -c100 -t60S -r10 -v --content-type "application/json" 'http://storage:8080/storages POST {"desc": "BigStorage"}'
+siege -c100 -t30S -r10 -v --content-type "application/json" 'http://storage:8080/storages POST {"desc": "BigStorage"}'
 
 
-Transactions:                   7732 hits
+Transactions:                  27732 hits
 Availability:                  87.32 %
 Elapsed time:                  17.12 secs
 Data transferred:               1.93 MB
@@ -1039,8 +1039,8 @@ Response time:                  0.18 secs
 Transaction rate:             451.64 trans/sec
 Throughput:                     0.11 MB/sec
 Concurrency:                   81.21
-Successful transactions:        7732
-Failed transactions:            1123
+Successful transactions:       24215
+Failed transactions:            3517
 Longest transaction:            0.94
 Shortest transaction:           0.00
 
