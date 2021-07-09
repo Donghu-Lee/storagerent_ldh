@@ -1177,12 +1177,14 @@ payment-5b659b7c8d-gj895   1/1     Running     1         10m
 ```
 pod 상태 확인을 통해 payment서비스의 RESTARTS 횟수가 증가한 것을 확인할 수 있다.
 
-# Config Map
-- Config Map 사용
 
-1: cofigmap.yml 파일 생성
+# Config Map
+
+- Config Map
+
+1: configmap.yml 파일 생성
 ```
-kubectl apply -f cofigmap.yml
+kubectl apply -f configmap.yml
 
 
 apiVersion: v1
@@ -1191,9 +1193,9 @@ metadata:
   name: storagerent-config
   namespace: storagerent
 data:
-  # 단일 key-value
-  max_reservation_per_person: "10"
-  ui_properties_file_name: "user-interface.properties"
+  prop:
+    storage.url: http://storage:8080
+    payment.url: http://payment:8080
 ```
 
 2. deployment.yml에 적용하기
@@ -1203,24 +1205,98 @@ kubectl apply -f deployment.yml
 
 
 .......
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment
+  namespace: storagerent
+  labels:
+    app: payment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: payment
+  template:
+    metadata:
+      labels:
+        app: payment
+    spec:
+      containers:
+        - name: payment
+          image: 223209618259.dkr.ecr.ap-northeast-1.amazonaws.com/payment:v1
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
           env:
-			# cofingmap에 있는 단일 key-value
-            - name: MAX_RESERVATION_PER_PERSION
+            - name: prop.storage.url
               valueFrom:
                 configMapKeyRef:
                   name: storagerent-config
-                  key: max_reservation_per_person
-           - name: UI_PROPERTIES_FILE_NAME
+                  key: prop.storage.url
+	    - name: prop.storage.url
               valueFrom:
                 configMapKeyRef:
                   name: storagerent-config
-                  key: ui_properties_file_name
-          volumeMounts:
-          - mountPath: "/mnt/aws"
-            name: volume
-      volumes:
-        - name: volume
-          persistentVolumeClaim:
-            claimName: aws-efs
+                  key: prop.payment.url
 ```
+- kubectl describe pod/reservation-76ccbf5bfb-czj26 -n storagerent
+```
+Name:         reservation-845df65b9c-5ttxp
+Namespace:    storagerent
+Priority:     0
+Node:         ip-10-100-237-67.ap-northeast-1.compute.internal/10-100-237-67
+Start Time:   Thu, 08 Jul 2021 04:04:46 +0900
+Labels:       app=reservation
+              pod-template-hash=845df65b9c
+Annotations:  kubernetes.io/psp: eks.privileged
+Status:       Running
+IP:           10.100.237.67
+IPs:
+  IP:           10.100.237.67
+Controlled By:  ReplicaSet/reservation-845df65b9c
+Containers:
+  reservation:
+    Container ID:   docker://a3223a27e94ecdb0394f689315b79b8563315b79b856376bc5abdd5fa7f
+    Image:          223209618259.dkr.ecr.ap-northeast-1.amazonaws.com/reservation:v1
+    Image ID:       docker-pullable://223209618259.dkr.ecr.ap-northeast-1.amazonaws.com/reservation@sha256:01a3f5be82f95ea27e94ecdb0394f689315b79b85630f4f4a4cf4bb733753c596515
+    Port:           8080/TCP
+    Host Port:      0/TCP
+    State:          Running
+      Started:      Thu, 09 Jul 2021 10:06:30 +0900
+    Ready:          True
+    Restart Count:  0
+    Environment:
+      prop.storage.url:  <set to the key 'prop.storage.url' of config map 'storagerent-config'>  Optional: false
+      prop.payment.url:  <set to the key 'prop.payment.url' of config map 'storagerent-config'>  Optional: false
+    Mounts:
+      /var/run/secrets/kubernetes.io/serviceaccount from default-token-c77x8 (ro)
+Conditions:
+  Type              Status
+  Initialized       True
+  Ready             True
+  ContainersReady   True
+  PodScheduled      True
+Volumes:
+  default-token-c77x8:
+    Type:        Secret (a volume populated by a Secret)
+    SecretName:  default-token-c77x8
+    Optional:    false
+QoS Class:       BestEffort
+Node-Selectors:  <none>
+Tolerations:     node.kubernetes.io/not-ready:NoExecute op=Exists for 300s
+                 node.kubernetes.io/unreachable:NoExecute op=Exists for 300s
+Events:
+  Type     Reason     Age                   From               Message
+  ----     ------     ----                  ----               -------
+  Normal   Scheduled  3m27s                 default-scheduler  Successfully assigned storagerent/reservation-845df65b9c-5ttxp to ip-10-100-237-67-ap-northeast-1.compute.internal
+  Normal   Pulling    3m26s                 kubelet            Pulling image "223209618259.dkr.ecr.ap-northeast-1.amazonaws.com/reservation:v1"
+  Normal   Pulled     3m22s                 kubelet            Successfully pulled image "223209618259.dkr.ecr.ap-northeast-1.amazonaws.com/reservation:v1"
+  Warning  Failed     117s (x8 over 3m22s)  kubelet            Error: configmap "storagerent-config" not found
+  Normal   Pulled     103s (x8 over 3m21s)  kubelet            Container image "223209618259.dkr.ecr.ap-northeast-1.amazonaws.com/reservation:v1" already present on machine
+  Normal   Created    103s                  kubelet            Created container reservation
+  Normal   Started    103s                  kubelet            Started container reservation
+
+```
+
 
