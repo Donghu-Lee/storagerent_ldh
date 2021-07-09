@@ -877,7 +877,7 @@ $kubectl apply -f destination-rule.yml
 
 root@siege:/# siege -c50 -t20S -v --content-type "application/json" 'http://gateway:8080/storages POST {"desc": "DongChango"}' 
 ```
-![image](https://user-images.githubusercontent.com/84304082/125023978-e24a6f80-e0ba-11eb-99ca-1653a34bb7d2.png)
+![image](https://user-images.githubusercontent.com/84304082/125025811-4c184880-e0be-11eb-895b-fed654a9f586.png)
 
 - DestinationRule 적용되어 서킷 브레이킹 동작 확인 (kiali 화면)
 ![image](https://user-images.githubusercontent.com/84304082/125024264-60a71180-e0bb-11eb-9d95-9db19457b953.png)
@@ -1087,64 +1087,20 @@ pod 상태 확인을 통해 payment서비스의 RESTARTS 횟수가 증가한 것
 
 - Config Map
 
-1: configmap.yml 파일 생성
-```
-kubectl apply -f configmap.yml
+1. configmap.yml 파일 생성
 
+![image](https://user-images.githubusercontent.com/84304082/125025926-871a7c00-e0be-11eb-8ed4-724bcb6921af.png)
 
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: storagerent-config
-  namespace: storagerent
-data:
-  prop:
-    storage.url: http://storage:8080
-    payment.url: http://payment:8080
-```
 
 2. deployment.yml에 적용하기
 
 ```
 kubectl apply -f deployment.yml
-
-
-.......
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: payment
-  namespace: storagerent
-  labels:
-    app: payment
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: payment
-  template:
-    metadata:
-      labels:
-        app: payment
-    spec:
-      containers:
-        - name: payment
-          image: 223209618259.dkr.ecr.ap-northeast-1.amazonaws.com/payment:v1
-          imagePullPolicy: Always
-          ports:
-            - containerPort: 8080
-          env:
-            - name: prop.storage.url
-              valueFrom:
-                configMapKeyRef:
-                  name: storagerent-config
-                  key: prop.storage.url
-	    - name: prop.storage.url
-              valueFrom:
-                configMapKeyRef:
-                  name: storagerent-config
-                  key: prop.payment.url
 ```
+![image](https://user-images.githubusercontent.com/84304082/125026037-c3e67300-e0be-11eb-8662-c056b5383e9d.png)
+
+
+
 - kubectl describe pod/reservation-76ccbf5bfb-czj26 -n storagerent
 ```
 Name:         reservation-76ccbf5bfb-czj26
