@@ -923,34 +923,14 @@ spec:
 ```
 $kubectl apply -f destination-rule.yml
 
-root@siege:/# siege -c100 -t20S -v --content-type "application/json" 'http://gateway:8080/storages POST {"desc": "BigStorage"}' 
-HTTP/1.1 201     0.42 secs:     283 bytes ==> POST http://gateway:8080/storages
-HTTP/1.1 503     0.25 secs:      81 bytes ==> POST http://gateway:8080/storages
-HTTP/1.1 201     0.43 secs:     283 bytes ==> POST http://gateway:8080/storages
-HTTP/1.1 503     0.27 secs:      81 bytes ==> POST http://gateway:8080/storages
-HTTP/1.1 201     0.49 secs:     283 bytes ==> POST http://gateway:8080/storages
-HTTP/1.1 201     0.23 secs:     283 bytes ==> POST http://gateway:8080/storages
-HTTP/1.1 503     0.26 secs:      81 bytes ==> POST http://gateway:8080/storages
-HTTP/1.1 201     0.36 secs:     283 bytes ==> POST http://gateway:8080/storages
-HTTP/1.1 503     0.21 secs:      81 bytes ==> POST http://gateway:8080/storages
-HTTP/1.1 503     0.22 secs:      81 bytes ==> POST http://gateway:8080/storages
+root@siege:/# siege -c50 -t20S -v --content-type "application/json" 'http://gateway:8080/storages POST {"desc": "BigStorage"}' 
 
-Lifting the server siege...
-Transactions:                   35296 hits
-Availability:                  59.04 %
-Elapsed time:                  20.01 secs
-Data transferred:               0.42 MB
-Response time:                  0.77 secs
-Transaction rate:              64.77 trans/sec
-Throughput:                     0.02 MB/sec
-Concurrency:                   99.47
-Successful transactions:       20838
-Failed transactions:           14458
-Longest transaction:            3.29
-Shortest transaction:           0.03
 ```
+![image](https://user-images.githubusercontent.com/84304082/125023978-e24a6f80-e0ba-11eb-99ca-1653a34bb7d2.png)
+
 - DestinationRule 적용되어 서킷 브레이킹 동작 확인 (kiali 화면)
-![image](https://user-images.githubusercontent.com/78999418/124833261-e0988300-dfb8-11eb-8735-2418e01e972d.png)
+![image](https://user-images.githubusercontent.com/84304082/125024264-60a71180-e0bb-11eb-9d95-9db19457b953.png)
+
 
 * DestinationRule 적용 제거 후 다시 부하 발생하여 정상 처리 확인
 ```
