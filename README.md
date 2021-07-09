@@ -424,7 +424,7 @@ http GET http://localhost:8088/reservations/1
 ```
 http get http://localhost:8086/deliveries/1
 ```
-![image](https://user-images.githubusercontent.com/84304082/125021385-79acc400-e0b5-11eb-8d48-6b6ebd140aff.png)
+![image](https://user-images.githubusercontent.com/84304082/125021583-ee7ffe00-e0b5-11eb-9fe9-5475068233ea.png)
 
 - 예약 후 - 결제 상태
 ```
