@@ -275,7 +275,7 @@
 		- id: payment
 		  uri: http://payment:8081
 		  predicates:
-		    - Path=/payments/** 
+		    - Path=/payments/**, /callmemleak/** 
 		- id: storage
 		  uri: http://storage:8082
 		  predicates:
@@ -402,7 +402,7 @@
 
 - 창고등록
 ```
-http POST http://localhost:8088/storages description="BigStorage" price=200000 storageStatus="available"
+http POST http://localhost:8088/storages description="Dongchango" price=200000 storageStatus="available"
 ```  
 ![image](https://user-images.githubusercontent.com/84304043/122844125-eb59e380-d33b-11eb-9a85-1a892021ca0d.png)
 - 예약등록
@@ -941,7 +941,7 @@ kubectl delete hpa storage -n storagerent
 
 - seige 로 배포작업 직전에 워크로드를 모니터링 함.
 ```
-siege -c50 -t30S -r10 -v --content-type "application/json" 'http://storage:8080/storages POST {"desc": "BigStorage"}'
+siege -c50 -t30S -r10 -v --content-type "application/json" 'http://storage:8080/storages POST {"desc": "Dongchango"}'
 
 ** SIEGE 4.0.4
 ** Preparing 1 concurrent users for battle.
@@ -965,7 +965,7 @@ kubectl apply -f payment_na.yaml  # Readiness Probe 미설정 버전
 - seige 의 화면으로 넘어가서 Availability 가 100% 미만으로 떨어졌는지 확인
 
 ```
-siege -c100 -t30S -r10 -v --content-type "application/json" 'http://storage:8080/storages POST {"desc": "BigStorage"}'
+siege -c100 -t30S -r10 -v --content-type "application/json" 'http://storage:8080/storages POST {"desc": "Dongchango"}'
 
 
 Transactions:                  27732 hits
