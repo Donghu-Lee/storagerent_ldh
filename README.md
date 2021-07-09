@@ -420,6 +420,12 @@ http GET http://localhost:8088/storages/1
 http GET http://localhost:8088/reservations/1
 ```  
 ![image](https://user-images.githubusercontent.com/84304043/122843763-31fb0e00-d33b-11eb-83f6-140191ec1a6d.png)
+- 예약 후 - 운송지원 전 상태
+```
+http get http://localhost:8086/deliveries/1
+```
+![image](https://user-images.githubusercontent.com/84304082/125021385-79acc400-e0b5-11eb-8d48-6b6ebd140aff.png)
+
 - 예약 후 - 결제 상태
 ```
 http GET http://gateway:8080/payments/1
