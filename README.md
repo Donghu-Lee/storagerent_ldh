@@ -816,172 +816,140 @@ codebuild 프로젝트 및 빌드 이력
 
 ## 동기식 호출 / 서킷 브레이킹 / 장애격리
 
-* 서킷 브레이킹: Spring FeignClient + Hystrix 옵션을 사용하여 구현함
+* 서킷 브레이킹 istio-injection + DestinationRule
 
-시나리오는 예약(reservation)--> 창고(storage) 시의 연결을 RESTful Request/Response 로 연동하여 구현이 되어있고, 예약 요청이 과도할 경우 CB 를 통하여 장애격리.
-
-* Hystrix 를 설정: 요청처리 쓰레드에서 처리시간이 610 밀리가 넘어서기 시작하여 어느정도 유지되면 CB 회로가 닫히도록 (요청을 빠르게 실패처리, 차단) 설정
+- istio 설치
 ```
-# (reservation) application.yml
+curl -L https://istio.io/downloadIstio | ISTIO_VERSION=1.7.1 TARGET_ARCH=x86_64 sh -"(istio v1.7.1은 Kubernetes 1.16이상에서만 동작)"
+cd istio-1.7.1
+export PATH=$PWD/bin:$PATH
+istioctl install --set profile=demo --set hub=gcr.io/istio-release
+"note : there are other profiles for production or performance testing."
+Istio 모니터링 툴(Telemetry Applications) 설치
+vi samples/addons/kiali.yaml
+4라인의
+apiVersion: apiextensions.k8s.io/v1beta1 을
+apiVersion: apiextensions.k8s.io/v1으로 수정
+kubectl apply -f samples/addons
+kiali.yaml 오류발생시, 아래 명령어 실행
+kubectl apply -f https://raw.githubusercontent.com/istio/istio/release-1.7/samples/addons/kiali.yaml
+모니터링(Tracing & Monitoring) 툴 설정
+Monitoring Server - Kiali
+기본 ServiceType 변경 : ClusterIP를 LoadBalancer 로…
+kubectl edit svc kiali -n istio-system
+:%s/ClusterIP/LoadBalancer/g
+:wq!
+모니터링 시스템(kiali) 접속 :
+EXTERNAL-IP:20001 (admin/admin)
+Tracing Server - Jaeger
 
-feign:
-  hystrix:
-    enabled: true
-    
-hystrix:
-  command:
-    # 전역설정
-    default:
-      execution.isolation.thread.timeoutInMilliseconds: 610
+기본 ServiceType 변경 : ClusterIP를 LoadBalancer 로…
+kubectl edit svc tracing -n istio-system
+:%s/ClusterIP/LoadBalancer/g
+:wq!
+분산추적 시스템(tracing) 접속 : EXTERNAL-IP:80
+설치확인
+kubectl get all -n istio-system
 ```
-* 피호출 서비스 (창고:예약요청) 의 임의 부하 처리 - 400 밀리에서 증감 220 밀리 정도 왔다갔다 하게
+![image](https://user-images.githubusercontent.com/84304082/125011456-7a3c5f00-e0a3-11eb-9cdd-a03f4c7fdc7d.png)
 
+- istio-injection 적용
 ```
-# (예약요청) StorageController.java    
- @RestController
- public class StorageController {
-
-@RequestMapping(value = "/chkAndReqReserve",
-        method = RequestMethod.GET,
-        produces = "application/json;charset=UTF-8")
-
-public void chkAndReqReserve(HttpServletRequest request, HttpServletResponse response)
-        throws Exception {
-        System.out.println("##### /storage/chkAndReqReserve  called #####");
-            try {
-               Thread.currentThread().sleep((long) (400 + Math.random() * 220));
-           } catch (InterruptedException e) {
-               e.printStackTrace();
-           }
-        }
- }
-    
+kubectl label namespace storagerent istio-injection=enabled
 ```
-* 부하테스터 siege 툴을 통한 서킷 브레이커 동작 확인:
+![image](https://user-images.githubusercontent.com/84304082/125011527-9a6c1e00-e0a3-11eb-8167-d577453e198b.png)
 
-siege 실행
 
+- 부하테스터 siege 툴을 통한 서킷 브레이커 동작 확인:
+- 동시사용자 100명
+- 20초 동안 실시
 ```
-kubectl run siege --image=apexacme/siege-nginx -n storagerent
-kubectl exec -it siege -c siege -n storagerent -- /bin/bash
-```
+root@siege:/# siege -c100 -t20S -v --content-type "application/json" 'http://gateway:8080/storages POST {"desc": "BigStorage"}' 
 
-- 동시사용자 100로 부하 생성 시 모두 정상
-```
-siege -c100 -t60S -r10 -v --content-type "application/json" 'http://reservation:8080/reservations POST {"storageId": "1"}'
+HTTP/1.1 404     0.06 secs:     111 bytes ==> POST http://gateway:8080/storages
+HTTP/1.1 404     0.04 secs:     111 bytes ==> POST http://gateway:8080/storages
+HTTP/1.1 404     0.04 secs:     111 bytes ==> POST http://gateway:8080/storages
+HTTP/1.1 404     0.06 secs:     111 bytes ==> POST http://gateway:8080/storages
+HTTP/1.1 404     0.03 secs:     111 bytes ==> POST http://gateway:8080/storages
+HTTP/1.1 404     0.04 secs:     111 bytes ==> POST http://gateway:8080/storages
+HTTP/1.1 404     0.04 secs:     111 bytes ==> POST http://gateway:8080/storages
+HTTP/1.1 404     0.06 secs:     111 bytes ==> POST http://gateway:8080/storages
+HTTP/1.1 404     0.02 secs:     111 bytes ==> POST http://gateway:8080/storages
+HTTP/1.1 404     0.06 secs:     111 bytes ==> POST http://gateway:8080/storages
+HTTP/1.1 404     0.02 secs:     111 bytes ==> POST http://gateway:8080/storages
+HTTP/1.1 404     0.02 secs:     111 bytes ==> POST http://gateway:8080/storages
+HTTP/1.1 404     0.06 secs:     111 bytes ==> POST http://gateway:8080/storages
 
 
-** SIEGE 4.0.4
-** Preparing 1 concurrent users for battle.
-The server is now under siege...
-HTTP/1.1 201     1.30 secs:     255 bytes ==> POST http://reservation:8080/reservations
-HTTP/1.1 201     1.03 secs:     255 bytes ==> POST http://reservation:8080/reservations
-HTTP/1.1 201     1.03 secs:     255 bytes ==> POST http://reservation:8080/reservations
-HTTP/1.1 201     1.02 secs:     255 bytes ==> POST http://reservation:8080/reservations
-HTTP/1.1 201     1.04 secs:     255 bytes ==> POST http://reservation:8080/reservations
-HTTP/1.1 201     1.03 secs:     255 bytes ==> POST http://reservation:8080/reservations
-HTTP/1.1 201     1.02 secs:     255 bytes ==> POST http://reservation:8080/reservations
-HTTP/1.1 201     1.02 secs:     255 bytes ==> POST http://reservation:8080/reservations
-HTTP/1.1 201     1.02 secs:     255 bytes ==> POST http://reservation:8080/reservations
-HTTP/1.1 201     1.03 secs:     257 bytes ==> POST http://reservation:8080/reservations
-HTTP/1.1 201     1.03 secs:     257 bytes ==> POST http://reservation:8080/reservations
-HTTP/1.1 201     1.02 secs:     257 bytes ==> POST http://reservation:8080/reservations
-HTTP/1.1 201     1.02 secs:     257 bytes ==> POST http://reservation:8080/reservations
-HTTP/1.1 201     1.01 secs:     257 bytes ==> POST http://reservation:8080/reservations
-HTTP/1.1 201     1.02 secs:     257 bytes ==> POST http://reservation:8080/reservations
-```
-
-* 요청이 과도하여 CB를 동작함 요청을 차단
-```
-
-HTTP/1.1 201     2.68 secs:     261 bytes ==> POST http://reservation:8080/reservations
-HTTP/1.1 201     2.73 secs:     261 bytes ==> POST http://reservation:8080/reservations
-HTTP/1.1 201     2.69 secs:     261 bytes ==> POST http://reservation:8080/reservations
-HTTP/1.1 201     2.89 secs:     261 bytes ==> POST http://reservation:8080/reservations
-HTTP/1.1 201     2.67 secs:     261 bytes ==> POST http://reservation:8080/reservations
-HTTP/1.1 201     2.58 secs:     261 bytes ==> POST http://reservation:8080/reservations
-HTTP/1.1 201     2.90 secs:     261 bytes ==> POST http://reservation:8080/reservations
-HTTP/1.1 201     2.72 secs:     261 bytes ==> POST http://reservation:8080/reservations
-HTTP/1.1 201     2.65 secs:     261 bytes ==> POST http://reservation:8080/reservations
-HTTP/1.1 201     2.84 secs:     261 bytes ==> POST http://reservation:8080/reservations
-HTTP/1.1 201     2.69 secs:     261 bytes ==> POST http://reservation:8080/reservations
-HTTP/1.1 201     2.53 secs:     261 bytes ==> POST http://reservation:8080/reservations
-HTTP/1.1 201     2.74 secs:     261 bytes ==> POST http://reservation:8080/reservations
-HTTP/1.1 201     2.73 secs:     261 bytes ==> POST http://reservation:8080/reservations
-HTTP/1.1 201     2.61 secs:     261 bytes ==> POST http://reservation:8080/reservations
-HTTP/1.1 201     2.73 secs:     261 bytes ==> POST http://reservation:8080/reservations
-HTTP/1.1 201     2.80 secs:     261 bytes ==> POST http://reservation:8080/reservations
-
-```
-* 요청을 어느정도 돌려보내고나니, 기존에 밀린 일들이 처리되었고, 회로를 닫아 요청을 다시 받기 시작
-```
-
-HTTP/1.1 201     2.73 secs:     261 bytes ==> POST http://reservation:8080/reservations
-HTTP/1.1 201     2.80 secs:     261 bytes ==> POST http://reservation:8080/reservations
-HTTP/1.1 201     2.74 secs:     261 bytes ==> POST http://reservation:8080/reservations
-HTTP/1.1 201     2.84 secs:     261 bytes ==> POST http://reservation:8080/reservations
-HTTP/1.1 201     2.80 secs:     261 bytes ==> POST http://reservation:8080/reservations
-HTTP/1.1 201     2.71 secs:     261 bytes ==> POST http://reservation:8080/reservations
-HTTP/1.1 201     2.77 secs:     261 bytes ==> POST http://reservation:8080/reservations
-HTTP/1.1 201     2.81 secs:     261 bytes ==> POST http://reservation:8080/reservations
-HTTP/1.1 201     2.63 secs:     261 bytes ==> POST http://reservation:8080/reservations
-HTTP/1.1 201     2.85 secs:     261 bytes ==> POST http://reservation:8080/reservations
-HTTP/1.1 201     2.76 secs:     261 bytes ==> POST http://reservation:8080/reservations
-HTTP/1.1 201     2.63 secs:     261 bytes ==> POST http://reservation:8080/reservations
-HTTP/1.1 201     2.86 secs:     261 bytes ==> POST http://reservation:8080/reservations
-HTTP/1.1 201     2.42 secs:     261 bytes ==> POST http://reservation:8080/reservations
-HTTP/1.1 201     2.49 secs:     261 bytes ==> POST http://reservation:8080/reservations
-
-```
-* 다시 요청이 쌓이기 시작하여 건당 처리시간이 지연이 보이기 시작 => 회로 열기 => 요청 실패처리
-```
-HTTP/1.1 201     3.21 secs:     261 bytes ==> POST http://reservation:8080/reservations
-HTTP/1.1 201     3.27 secs:     261 bytes ==> POST http://reservation:8080/reservations
-HTTP/1.1 201     3.22 secs:     261 bytes ==> POST http://reservation:8080/reservations
-HTTP/1.1 201     3.30 secs:     261 bytes ==> POST http://reservation:8080/reservations
-HTTP/1.1 201     3.28 secs:     261 bytes ==> POST http://reservation:8080/reservations
-HTTP/1.1 201     3.20 secs:     261 bytes ==> POST http://reservation:8080/reservations
-HTTP/1.1 201     3.27 secs:     261 bytes ==> POST http://reservation:8080/reservations
-HTTP/1.1 201     3.30 secs:     261 bytes ==> POST http://reservation:8080/reservations
-HTTP/1.1 201     3.26 secs:     261 bytes ==> POST http://reservation:8080/reservations
-HTTP/1.1 201     3.26 secs:     261 bytes ==> POST http://reservation:8080/reservations
-HTTP/1.1 201     3.31 secs:     261 bytes ==> POST http://reservation:8080/reservations
-HTTP/1.1 201     3.24 secs:     261 bytes ==> POST http://reservation:8080/reservations
-HTTP/1.1 201     3.28 secs:     261 bytes ==> POST http://reservation:8080/reservations
-HTTP/1.1 201     3.30 secs:     261 bytes ==> POST http://reservation:8080/reservations
-HTTP/1.1 201     3.28 secs:     261 bytes ==> POST http://reservation:8080/reservations
-HTTP/1.1 201     3.32 secs:     261 bytes ==> POST http://reservation:8080/reservations
-HTTP/1.1 201     3.25 secs:     261 bytes ==> POST http://reservation:8080/reservations
-HTTP/1.1 201     3.06 secs:     261 bytes ==> POST http://reservation:8080/reservations
-HTTP/1.1 201     3.35 secs:     261 bytes ==> POST http://reservation:8080/reservations
-HTTP/1.1 201     3.32 secs:     261 bytes ==> POST http://reservation:8080/reservations
-HTTP/1.1 201     3.26 secs:     261 bytes ==> POST http://reservation:8080/reservations
-
-```
-* 생각보다 빨리 상태 호전됨 - (건당 (쓰레드당) 처리시간이 줄어들면서 회복) => 요청 수락
-
-- 반복적으로 진행되나 정상 운영됨
-
-```
 Lifting the server siege...
-Transactions:		        1042 hits
-Availability:		       75.17 %
-Elapsed time:		       59.99 secs
-Data transferred:	        0.21 MB
-Response time:		        5.48 secs
-Transaction rate:	       17.49 trans/sec
-Throughput:		        0.00 MB/sec
-Concurrency:		       95.89
-Successful transactions:        1042
-Failed transactions:	         557
-Longest transaction:	        8.30
-Shortest transaction:	        0.01
+Transactions:                  35296 hits
+Availability:                 100.00 %
+Elapsed time:                  19.87 secs
+Data transferred:               3.74 MB
+Response time:                  0.06 secs
+Transaction rate:            1776.35 trans/sec
+Throughput:                     0.19 MB/sec
+Concurrency:                   99.47
+Successful transactions:        35296
+Failed transactions:               0
+Longest transaction:            0.92
+Shortest transaction:           0.02
 
 
 ```
+- 서킷 브레이킹을 위한 DestinationRule 적용
+```
+# destination-rule.yml
+apiVersion: networking.istio.io/v1
+kind: DestinationRule
+metadata:
+  name: dr-storage
+  namespace: storagerent
+spec:
+  host: storage
+  trafficPolicy:
+    connectionPool:
+      http:
+        http1MaxPendingRequests: 1
+        maxRequestsPerConnection: 1
+```
 
-- 운영시스템은 죽지 않고 지속적으로 CB 에 의하여 적절히 회로가 열림과 닫힘이 벌어지면서 자원을 보호하고 있음을 보여줌.
-  virtualhost 설정과 동적 Scale out (replica의 자동적 추가,HPA) 을 통하여 시스템을 확장 해주는 후속처리가 필요.
+```
+$kubectl apply -f destination-rule.yml
+
+root@siege:/# siege -c100 -t20S -v --content-type "application/json" 'http://gateway:8080/storages POST {"desc": "BigStorage"}' 
+HTTP/1.1 201     0.42 secs:     283 bytes ==> POST http://gateway:8080/storages
+HTTP/1.1 503     0.25 secs:      81 bytes ==> POST http://gateway:8080/storages
+HTTP/1.1 201     0.43 secs:     283 bytes ==> POST http://gateway:8080/storages
+HTTP/1.1 503     0.27 secs:      81 bytes ==> POST http://gateway:8080/storages
+HTTP/1.1 201     0.49 secs:     283 bytes ==> POST http://gateway:8080/storages
+HTTP/1.1 201     0.23 secs:     283 bytes ==> POST http://gateway:8080/storages
+HTTP/1.1 503     0.26 secs:      81 bytes ==> POST http://gateway:8080/storages
+HTTP/1.1 201     0.36 secs:     283 bytes ==> POST http://gateway:8080/storages
+HTTP/1.1 503     0.21 secs:      81 bytes ==> POST http://gateway:8080/storages
+HTTP/1.1 503     0.22 secs:      81 bytes ==> POST http://gateway:8080/storages
+
+Lifting the server siege...
+Transactions:                   35296 hits
+Availability:                  59.04 %
+Elapsed time:                  20.01 secs
+Data transferred:               0.42 MB
+Response time:                  0.77 secs
+Transaction rate:              64.77 trans/sec
+Throughput:                     0.02 MB/sec
+Concurrency:                   99.47
+Successful transactions:       20838
+Failed transactions:           14458
+Longest transaction:            3.29
+Shortest transaction:           0.03
+```
+- DestinationRule 적용되어 서킷 브레이킹 동작 확인 (kiali 화면)
+![image](https://user-images.githubusercontent.com/78999418/124833261-e0988300-dfb8-11eb-8735-2418e01e972d.png)
+
+* DestinationRule 적용 제거 후 다시 부하 발생하여 정상 처리 확인
+```
+kubectl delete -f destination-rule.yml
+```
 
 
 ### 오토스케일 아웃
