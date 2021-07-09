@@ -924,18 +924,17 @@ spec:
 $kubectl apply -f destination-rule.yml
 
 root@siege:/# siege -c50 -t20S -v --content-type "application/json" 'http://gateway:8080/storages POST {"desc": "BigStorage"}' 
-
 ```
 ![image](https://user-images.githubusercontent.com/84304082/125023978-e24a6f80-e0ba-11eb-99ca-1653a34bb7d2.png)
 
 - DestinationRule 적용되어 서킷 브레이킹 동작 확인 (kiali 화면)
 ![image](https://user-images.githubusercontent.com/84304082/125024264-60a71180-e0bb-11eb-9d95-9db19457b953.png)
 
-
 * DestinationRule 적용 제거 후 다시 부하 발생하여 정상 처리 확인
 ```
 kubectl delete -f destination-rule.yml
 ```
+![image](https://user-images.githubusercontent.com/84304082/125024625-1b371400-e0bc-11eb-84fd-c29275a4e4ad.png)
 
 
 ### 오토스케일 아웃
