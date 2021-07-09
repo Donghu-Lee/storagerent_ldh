@@ -1240,9 +1240,9 @@ spec:
                   name: storagerent-config
                   key: prop.payment.url
 ```
-- kubectl describe pod/reservation-76ccbf5bfb-czj26 -n storagerent
+- kubectl describe pod/reservation-76ccbf5bfb -n storagerent
 ```
-Name:         reservation-845df65b9c-5ttxp
+Name:         reservation-76ccbf5bfb
 Namespace:    storagerent
 Priority:     0
 Node:         ip-10-100-237-67.ap-northeast-1.compute.internal/10-100-237-67
