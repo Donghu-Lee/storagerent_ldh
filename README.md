@@ -1240,37 +1240,39 @@ spec:
                   name: storagerent-config
                   key: prop.payment.url
 ```
-- kubectl describe pod/reservation-76ccbf5bfb -n storagerent
+- kubectl describe pod/reservation-76ccbf5bfb-czj26 -n storagerent
 ```
-Name:         reservation-76ccbf5bfb
+Name:         reservation-76ccbf5bfb-czj26
 Namespace:    storagerent
 Priority:     0
-Node:         ip-10-100-237-67.ap-northeast-1.compute.internal/10-100-237-67
-Start Time:   Thu, 08 Jul 2021 04:04:46 +0900
+Node:         ip-192-168-26-194.ap-northeast-1.compute.internal/192.168.26.194
+Start Time:   Thu, 08 Jul 2021 12:13:14 +0000
 Labels:       app=reservation
-              pod-template-hash=845df65b9c
+              pod-template-hash=76ccbf5bfb
 Annotations:  kubernetes.io/psp: eks.privileged
 Status:       Running
-IP:           10.100.237.67
+IP:           192.168.7.198
 IPs:
-  IP:           10.100.237.67
-Controlled By:  ReplicaSet/reservation-845df65b9c
+  IP:           192.168.7.198
+Controlled By:  ReplicaSet/reservation-76ccbf5bfb
 Containers:
   reservation:
-    Container ID:   docker://a3223a27e94ecdb0394f689315b79b8563315b79b856376bc5abdd5fa7f
+    Container ID:   docker://851dc8a7f64f93adc2dcd4f1018be5270dd778423a5d317c0ee318343b39f943
     Image:          223209618259.dkr.ecr.ap-northeast-1.amazonaws.com/reservation:v1
-    Image ID:       docker-pullable://223209618259.dkr.ecr.ap-northeast-1.amazonaws.com/reservation@sha256:01a3f5be82f95ea27e94ecdb0394f689315b79b85630f4f4a4cf4bb733753c596515
+    Image ID:       docker-pullable://223209618259.dkr.ecr.ap-northeast-1.amazonaws.com/reservation@sha256:61e9154e0eaa18eb615b8f0f805680737c2309688cb012557b6bfa838af9380e
     Port:           8080/TCP
     Host Port:      0/TCP
     State:          Running
-      Started:      Thu, 09 Jul 2021 10:06:30 +0900
+      Started:      Thu, 08 Jul 2021 12:13:15 +0000
     Ready:          True
     Restart Count:  0
+    Liveness:       http-get http://:8080/actuator/health delay=120s timeout=2s period=5s #success=1 #failure=5
+    Readiness:      http-get http://:8080/actuator/health delay=10s timeout=2s period=5s #success=1 #failure=10
     Environment:
       prop.storage.url:  <set to the key 'prop.storage.url' of config map 'storagerent-config'>  Optional: false
       prop.payment.url:  <set to the key 'prop.payment.url' of config map 'storagerent-config'>  Optional: false
     Mounts:
-      /var/run/secrets/kubernetes.io/serviceaccount from default-token-c77x8 (ro)
+      /var/run/secrets/kubernetes.io/serviceaccount from default-token-z4pfq (ro)
 Conditions:
   Type              Status
   Initialized       True
@@ -1278,9 +1280,9 @@ Conditions:
   ContainersReady   True
   PodScheduled      True
 Volumes:
-  default-token-c77x8:
+  default-token-z4pfq:
     Type:        Secret (a volume populated by a Secret)
-    SecretName:  default-token-c77x8
+    SecretName:  default-token-z4pfq
     Optional:    false
 QoS Class:       BestEffort
 Node-Selectors:  <none>
@@ -1289,7 +1291,7 @@ Tolerations:     node.kubernetes.io/not-ready:NoExecute op=Exists for 300s
 Events:
   Type     Reason     Age                   From               Message
   ----     ------     ----                  ----               -------
-  Normal   Scheduled  3m27s                 default-scheduler  Successfully assigned storagerent/reservation-845df65b9c-5ttxp to ip-10-100-237-67-ap-northeast-1.compute.internal
+  Normal   Scheduled  3m27s                 default-scheduler  Successfully assigned storagerent/reservation-76ccbf5bfb-czj26 to ip-10-100-237-67-ap-northeast-1.compute.internal
   Normal   Pulling    3m26s                 kubelet            Pulling image "223209618259.dkr.ecr.ap-northeast-1.amazonaws.com/reservation:v1"
   Normal   Pulled     3m22s                 kubelet            Successfully pulled image "223209618259.dkr.ecr.ap-northeast-1.amazonaws.com/reservation:v1"
   Warning  Failed     117s (x8 over 3m22s)  kubelet            Error: configmap "storagerent-config" not found
